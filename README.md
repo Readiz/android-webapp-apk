@@ -40,3 +40,5 @@ node --test tests/update-server.test.mjs
 생성된 앱의 `tools/build.py`는 Android 테스트·release lint·서명 build를 수행한다. [검증 기록](TESTING.md)에 실제 확인 범위와 제한을 기록한다. 실기기 설치와 실계정 로그인은 자동으로 수행하지 않는다.
 
 출발 코드: Readiz/aoa-research `b63552d`, Readiz/invest `eee300e`. 실제 서비스 URL·서명키·APK·개인 데이터는 가져오지 않았다. SDK/Gradle은 기존 환경을 사용하며 자동 설치하지 않는다.
+
+공개 해설: [웹앱을 자동 업데이트 가능한 Android APK로 만들기](https://www.readiz.com/llm-wiki/android-webapp-apk-auto-update-signing-skill/). 생성부터 서명키 관리·게시까지의 흐름을 설명한다.

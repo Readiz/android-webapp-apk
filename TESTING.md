@@ -1,6 +1,6 @@
 # 검증 기록
 
-2026-10-13 Mac에서 Python 3.9, Node, JDK 17, Gradle 8.13, Android SDK platform 36/build-tools 35.0.0을 사용했다. 기존 SDK/Gradle 캐시를 재사용했다. 임시 생성 프로젝트·빌드·서명키는 Git 밖 `/private/tmp/android-webapp-apk-validation`에 두었으며 약 16 MiB였다. 빌드 시작 전 2 GiB 여유 공간 기준을 적용했다.
+2026-10-13 Mac에서 Python 3.9, Node, JDK 17, Gradle 8.13, Android SDK platform 36/build-tools 35.0.0을 사용했다. 기존 SDK/Gradle 캐시를 재사용했다. 임시 생성 프로젝트·빌드·서명키는 Git 밖 `<임시 작업 폴더>/android-webapp-apk-validation`에 두었으며 약 16 MiB였다. 빌드 시작 전 2 GiB 여유 공간 기준을 적용했다.
 
 ## 통과한 검증
 

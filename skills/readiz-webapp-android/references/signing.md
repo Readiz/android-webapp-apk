@@ -9,7 +9,7 @@
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-export GRADLE_HOME=/Users/readiz/.cache/readiz-tv-android/gradle-8.13
+export GRADLE_HOME=/path/to/gradle-8.13
 python3 tools/init_signing.py --new-app
 ```
 
@@ -48,7 +48,7 @@ python3 tools/init_signing.py --new-app
 
 ## 암호화 백업과 복원
 
-NAS를 쓸 경우 SMB 실제 마운트, 서버/공유, 쓰기 권한과 여유 공간부터 확인한다. `/Volumes`에 경로가 있다는 것만으로 연결됐다고 판단하지 않는다. 현재 Readiz NAS의 알려진 연결은 `//readiz@192.168.0.5/readiz_private` → `/Volumes/readiz_private`이며 작업 때마다 다시 확인한다. 앱별 승인된 비공개 보관 경로를 사용하고 공개 서빙 경로를 사용하지 않는다.
+NAS를 쓸 경우 SMB 실제 마운트, 서버/공유, 쓰기 권한과 여유 공간부터 확인한다. `/Volumes`에 경로가 있다는 것만으로 연결됐다고 판단하지 않는다. 실제 NAS 주소·공유명·마운트 위치는 프로젝트의 비공개 운영 설정에서 확인한다. 앱별 승인된 비공개 보관 경로를 사용하고 공개 서빙 경로를 사용하지 않는다.
 
 `age`가 설치되어 있다면 다음은 사람이 백업 암호를 직접 입력하는 예시다. `backup_file`은 확인한 비공개 저장소의 **새 파일 경로**로 먼저 지정한다. 백업 암호는 키 비밀번호와 별도로 관리한다.
 

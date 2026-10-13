@@ -1,0 +1,10 @@
+{
+  "appName": "Readiz Notes",
+  "applicationId": "com.readiz.example.notes",
+  "versionCode": 1,
+  "versionName": "0.1.0",
+  "homeUrl": "https://notes.example.com/app/home",
+  "internalUrls": ["https://notes.example.com/app"],
+  "updateBaseUrl": "https://updates.example.com/notes/",
+  "signingAlias": "notes-release"
+}

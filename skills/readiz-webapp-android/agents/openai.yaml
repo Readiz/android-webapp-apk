@@ -1,0 +1,4 @@
+interface:
+  display_name: "Readiz 웹앱 Android"
+  short_description: "웹앱의 Android 패키징, 자동 업데이트와 서명 유지 배포"
+  default_prompt: "$readiz-webapp-android를 사용해 이 웹앱을 자동 업데이트 가능한 Android 앱으로 만들어줘."

@@ -1,0 +1,10 @@
+{
+  "appName": "Readiz Library",
+  "applicationId": "com.readiz.example.library",
+  "versionCode": 7,
+  "versionName": "1.2.3",
+  "homeUrl": "https://library.example.org/",
+  "internalUrls": ["https://library.example.org/", "https://login.example.org/library"],
+  "updateBaseUrl": "https://updates.example.org/library/",
+  "signingAlias": "library-release"
+}

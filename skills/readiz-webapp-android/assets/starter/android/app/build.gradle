@@ -1,0 +1,38 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+plugins { id 'com.android.application' }
+def cfg = new JsonSlurper().parse(file('../../app.json'))
+def signingDir = System.getenv('WEBAPP_SIGNING_DIR') ?: "${System.properties['user.home']}/.config/android-webapp-apk/${cfg.applicationId}/signing"
+def passwordFile = file("${signingDir}/password")
+android {
+    namespace 'com.readiz.webapp'
+    compileSdk 36
+    buildFeatures { buildConfig true }
+    defaultConfig {
+        applicationId cfg.applicationId
+        minSdk 23
+        targetSdk 35
+        versionCode cfg.versionCode
+        versionName cfg.versionName
+        resValue 'string', 'app_name', cfg.appName
+        buildConfigField 'String', 'APP_NAME', JsonOutput.toJson(cfg.appName)
+        buildConfigField 'String', 'HOME_URL', JsonOutput.toJson(cfg.homeUrl)
+        buildConfigField 'String', 'UPDATE_BASE_URL', JsonOutput.toJson(cfg.updateBaseUrl)
+        buildConfigField 'String[]', 'INTERNAL_URLS', '{' + cfg.internalUrls.collect { JsonOutput.toJson(it) }.join(',') + '}'
+    }
+    signingConfigs {
+        release {
+            storeFile file("${signingDir}/release.jks")
+            storePassword passwordFile.exists() ? passwordFile.text.trim() : ''
+            keyAlias cfg.signingAlias
+            keyPassword storePassword
+        }
+    }
+    buildTypes { release { signingConfig signingConfigs.release } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    testOptions { unitTests.includeAndroidResources = true }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.17'
+}

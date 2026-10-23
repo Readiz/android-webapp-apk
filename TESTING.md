@@ -6,10 +6,12 @@
 
 - Python 생성·서명 보존 검사 **6개**, Node HTTP fixture 검사 **4개** 통과. 기존 키·APK·운영 앱은 변경하지 않았다.
 - 템플릿의 `UpdateController.java`는 `new-home`의 메모 앱에 2026-10-19 커밋 `dabf3b4`로 반영된 파일과 바이트가 같다. 설치된 Codex 스킬은 이 저장소의 원본을 가리키는 링크이며 별도 사본 차이가 없다. VNC와 코딩노트 등 기존 앱의 개별 구현을 템플릿으로 덮어쓰지 않았다.
-- Android 테스트 소스는 총 **18개**이며 실행·복귀, 중복 요청, 버전별 유예, 권한 거절·허용, 오프라인, 설치 준비 실패, 이전 설정 이관과 종료 뒤 UI 호출 방지를 검토했다. **이번 정리에서 Android 컴파일·JUnit·lint는 완료하지 못했다.** 기존 Gradle 8.13의 `metadata.bin`과 AGP 의존성이 없어 오프라인 빌드가 시작되지 않았다.
-- 실제 SMB 연결을 확인한 전용 NAS 캐시에서 의존성을 복구했다. Gradle 실행 캐시를 NAS에 두면 파일 잠금에서 `Operation not supported`가 발생하므로 이를 중단하고 잠금·변환은 Mac, 다운로드 원본만 NAS로 분리했다. 이후 Mac의 사전 여유 공간 기준 **8 GiB** 아래로 내려가 빌드를 중단했다. 기존 캐시를 삭제하거나 전체 출력을 Mac으로 전환하지 않았다.
+- notes 설정(`com.readiz.example.notes`, 0.1.0/code 1)의 **debug·release Java 컴파일과 Android 검사 18개가 통과**했다(실패·오류·skip 0). 실행·복귀, 중복 요청, 버전별 유예, 권한 거절·허용, 오프라인, 설치 준비 실패, 이전 설정 이관과 종료 뒤 UI 호출 방지를 검사했다. library 설정과 release lint의 완료 결과는 아직 없다.
+- 기존 Gradle 8.13의 `metadata.bin`과 AGP 의존성이 없어 처음에는 오프라인 빌드가 시작되지 않았다. 실제 SMB 연결을 확인한 전용 NAS 캐시에서 의존성을 복구했다. 실행 캐시를 NAS에 두면 파일 잠금에서 `Operation not supported`가 발생하므로 잠금·변환은 Mac, 다운로드 원본만 NAS로 분리했다. 받은 jar 123개(106,002,613 bytes)는 NAS에서 다시 읽어 Gradle 주소 해시와 대조했다. 기존 캐시를 삭제하거나 전체 출력을 Mac으로 전환하지 않았다.
+- 디스크 정리 후 초기 여유 기준 8 GiB를 이번 한정 **7 GiB**로 조정했다. 다운로드 원본은 NAS에 두며, 로컬 검증 출력은 512 MiB, Gradle은 단일 worker·512 MiB heap으로 제한한다. 최소 7 GiB는 기존 NAS 운영 문서의 4 GiB 기준보다 3 GiB를 더 남기는 조건이다. 시스템 swap과 다른 앱에는 변경하지 않는다. AGP의 별도 lint worker에도 `-Pandroid.experimental.lint.heapSize=512m`을 지정하도록 재개 명령을 준비했다.
+- notes의 `lintAnalyzeRelease` 도중 가용 공간이 6.42 GiB로 내려가 감시가 검증을 중단했다. 로그에 소스 lint 오류는 없으며 **공간 기준에 따른 중단**이다. 컴파일·JUnit을 lint와 분리한 재시도도 데몬 시작 때 6.91 GiB가 되어 중단했다. 이후에도 가용 공간이 줄어 추가 실행하지 않았다. 이번 작업의 Gradle·worker 프로세스는 남아 있지 않으며, notes의 통과 결과와 생성 fixture를 보존했다.
 
-검증 로그와 작은 생성 fixture는 Git에서 제외한 `artifacts/reconcile-20261023/`에 남긴다. Mac에 충분한 여유를 확보한 뒤 서로 다른 설정의 생성 앱에 `:app:testDebugUnitTest :app:lintRelease :app:compileReleaseJavaWithJavac`를 실행해야 한다. 이 상태를 새 APK 빌드·배포 성공으로 취급하지 않는다. 실제 Android 기기는 현재 없어 설치·로그인·업데이트 확인을 반복하지 않았다.
+검증 로그·통과 결과의 체크포인트와 생성 fixture는 Git에서 제외한 `artifacts/reconcile-20261023/`에 남긴다. **남은 검증은 library의 컴파일·JUnit과 두 설정의 release lint**다. 공간 변동이 멎고 9 GiB 이상을 확보한 뒤 library의 `:app:testDebugUnitTest :app:compileReleaseJavaWithJavac`를 먼저 실행하고, 이어 두 설정의 `:app:lintRelease`를 실행한다. 실행 중 7 GiB 미만이면 다시 중단한다. 이 상태를 새 APK 빌드·배포 성공으로 취급하지 않는다. 실제 Android 기기는 현재 없어 설치·로그인·업데이트 확인을 반복하지 않았다.
 
 ## 2026-10-13 초기 보일러플레이트 검증
 

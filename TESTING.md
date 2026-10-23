@@ -11,7 +11,31 @@
 - 디스크 정리 후 초기 여유 기준 8 GiB를 이번 한정 **7 GiB**로 조정했다. 다운로드 원본은 NAS에 두며, 로컬 검증 출력은 512 MiB, Gradle은 단일 worker·512 MiB heap으로 제한한다. 최소 7 GiB는 기존 NAS 운영 문서의 4 GiB 기준보다 3 GiB를 더 남기는 조건이다. 시스템 swap과 다른 앱에는 변경하지 않는다. AGP의 별도 lint worker에도 `-Pandroid.experimental.lint.heapSize=512m`을 지정하도록 재개 명령을 준비했다.
 - notes의 `lintAnalyzeRelease` 도중 가용 공간이 6.42 GiB로 내려가 감시가 검증을 중단했다. 로그에 소스 lint 오류는 없으며 **공간 기준에 따른 중단**이다. 컴파일·JUnit을 lint와 분리한 재시도도 데몬 시작 때 6.91 GiB가 되어 중단했다. 이후에도 가용 공간이 줄어 추가 실행하지 않았다. 이번 작업의 Gradle·worker 프로세스는 남아 있지 않으며, notes의 통과 결과와 생성 fixture를 보존했다.
 
-검증 로그·통과 결과의 체크포인트와 생성 fixture는 Git에서 제외한 `artifacts/reconcile-20261023/`에 남긴다. **남은 검증은 library의 컴파일·JUnit과 두 설정의 release lint**다. 공간 변동이 멎고 9 GiB 이상을 확보한 뒤 library의 `:app:testDebugUnitTest :app:compileReleaseJavaWithJavac`를 먼저 실행하고, 이어 두 설정의 `:app:lintRelease`를 실행한다. 실행 중 7 GiB 미만이면 다시 중단한다. 이 상태를 새 APK 빌드·배포 성공으로 취급하지 않는다. 실제 Android 기기는 현재 없어 설치·로그인·업데이트 확인을 반복하지 않았다.
+검증 로그·통과 결과의 체크포인트와 생성 fixture는 Git에서 제외한 `artifacts/reconcile-20261023/`에 남긴다. 이 상태를 새 APK 빌드·배포 성공으로 취급하지 않는다. 실제 Android 기기는 현재 없어 설치·로그인·업데이트 확인을 반복하지 않았다.
+
+## 2026-10-24 남은 Android 검사 재개
+
+7 GiB 중단·9 GiB 재개 조건을 다시 평가했다. 검증 출력은 이미 약 262 MiB였고 예상 증분은 수십 MiB였으며, 다운로드 원본은 실제 SMB 마운트의 NAS에 보관하고 있었다. 기존 SDK와 Robolectric SDK 23/26/35 jar를 그대로 재사용하고, 새 Java 임시파일·Android 사용자캐시·Gradle 잠금·변환 결과는 전용 로컬 출력 안으로 제한했다. 이에 이번 남은 검사에는 기존 NAS 운영 기준과 같은 **4 GiB 보호선**을 적용하되, **로컬 출력 512 MiB·단일 worker·Gradle/test/lint heap 각각 최대 512 MiB**와 3초 간격 감시를 유지했다. 원본·서명키·기존 앱·다른 프로세스·swap 파일은 변경하지 않았다.
+
+- notes와 새 폐기용 library fixture의 Java 소스·검사 파일 각 8개가 구현 커밋 `ef1bc3e`와 바이트 단위로 같음을 확인했다. 설정 JSON과 각 파일의 SHA-256은 별도 manifest에 보존했다. library 설정은 `com.readiz.example.library`, 1.2.3/code 7과 예약된 example.org URL을 사용하며 키나 APK를 생성하지 않았다.
+- 첫 library 시도는 `ANDROID_USER_HOME`과 구형 `ANDROID_PREFS_ROOT`의 중복 설정으로 Android 캐시 위치 초기화에서 실패했다. 중복 변수를 제거한 뒤 실제 debug Java 컴파일을 마치고 JUnit worker 실행까지 진행했다. worker 명령에서 `-Xmx512m`, Robolectric offline 모드와 기존 jar 재사용을 확인했다.
+- JUnit 실행 중 시스템 가용량이 4 GiB 바로 아래로 내려가 다시 중단했다(로그 표시 4.00 GiB). **JUnit 실패나 소스 오류가 아니라 공간 보호선에 따른 중단**이다. 실패 직전 저장된 최소 정상 샘플은 4.037 GiB였으며, 임계값을 넘은 샘플의 정확한 byte 수는 당시 감시가 예외 전에 저장하지 않아 남아 있지 않다. 관측된 로컬 논리 출력 최대는 329.0 MiB였고 종료 후 실제 할당량은 약 264 MiB였다. 중단 후 작업용 Gradle·worker JVM이 없음을 확인했다.
+
+notes의 기존 debug·release 컴파일과 Android 검사 18개 통과 결과는 보존돼 있다. library는 debug Java 컴파일까지만 확인했고, **library JUnit·release Java 컴파일과 두 설정의 release lint는 아직 완료하지 못했다**. 세 JVM heap을 384 MiB, metaspace를 각각 256 MiB로 줄인 재시도도 준비했으나 시작 여유 6 GiB를 만족하지 않아 실행하지 않았다. 로컬 Android 실행은 여기서 중단하고 아래 원격 CI로 남은 검사를 넘긴다. NAS의 현재 jar 168개(423,530,314 bytes)를 다시 읽어 주소의 SHA-1과 모두 대조했고, 로컬 실행용 캐시·실패 로그·통과 체크포인트를 보존했다.
+
+### 원격 Android CI 준비
+
+[Android workflow](.github/workflows/android.yml)는 Ubuntu 24.04, JDK 17, Gradle 8.13에서 SDK 36과 build-tools 35.0.0의 설치를 확인한다. [검증 스크립트](tests/verify_android.py)는 저장소의 `examples/notes.json`과 `examples/library.json`으로 새 fixture를 만든 뒤 각 앱의 `:app:testDebugUnitTest :app:compileReleaseJavaWithJavac :app:lintRelease`를 단일 job에서 차례로 실행한다. 실패·오류·skip 없는 JUnit 결과와 lint 오류 0개를 확인한다.
+
+수동 실행과 템플릿·생성기·예시 설정·검증 스크립트·workflow 변경에만 실행되며 `contents: read`, 25분 제한을 사용한다. Gradle 캐시 업로드는 끄고, artifact에는 JUnit XML·lint XML/HTML·설정 JSON·소스 커밋/Java SHA-256 JSON만 복사한다. 서명·APK 생성·운영 배포는 실행하지 않으며 NAS 자료를 가져오지 않는다.
+
+로컬에서는 다음 준비 명령만 실행해 서로 다른 두 설정과 Java 파일 16개의 원본 일치, 보고서 업로드 디렉터리의 JSON 범위, 키·APK 미생성을 확인했다. **workflow 추가 자체는 Android 검사 완료를 뜻하지 않으며, 원격 실행 결과는 아직 대기 중이다.**
+
+```bash
+python3 -B tests/verify_android.py --out <새 임시 디렉터리> --prepare-only
+```
+
+실제 Android 검사는 같은 명령에서 `--prepare-only`를 빼고 실행한다. 기존 출력 디렉터리는 덮어쓰지 않는다.
 
 ## 2026-10-13 초기 보일러플레이트 검증
 

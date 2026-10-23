@@ -6,8 +6,12 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
-@RunWith(RobolectricTestRunner.class) @Config(sdk=35)
+@RunWith(RobolectricTestRunner.class) @Config(sdk=35, shadows=MainActivityTest.NoNetworkUpdates.class)
 public class MainActivityTest {
+ @org.robolectric.annotation.Implements(value=UpdateController.class, isInAndroidSdk=false)
+ public static class NoNetworkUpdates {
+  @org.robolectric.annotation.Implementation protected void execute(Runnable task) { }
+ }
  @Test public void configuredHomeKeepsStorageAndRestrictedSettings() {
   try(var c=Robolectric.buildActivity(MainActivity.class).setup()) {
    var a=c.get(); assertEquals(BuildConfig.HOME_URL,a.web.getUrl());

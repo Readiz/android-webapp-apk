@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
                 retryUrl = url.contains("/auth/") ? NavigationPolicy.HOME : url;
                 errorPanel.setVisibility(View.GONE);
             }
-            @Override public void onPageFinished(WebView view,String url) { CookieManager.getInstance().flush(); if(updates != null) updates.onPageFinished(); }
+            @Override public void onPageFinished(WebView view,String url) { CookieManager.getInstance().flush(); }
             @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) {
                 if(request.isForMainFrame()) showError();
             }

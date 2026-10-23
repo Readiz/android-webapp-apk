@@ -16,23 +16,26 @@ import java.util.concurrent.Executors;
 
 // Foreground entry checks and automatic downloads; the system owns install confirmation.
 class UpdateController {
-    static final long CHECK_INTERVAL = 15 * 60_000L, DEFER_INTERVAL = 24 * 3600_000L;
+    static final long DEFER_INTERVAL = 24 * 3600_000L;
     private static WeakReference<UpdateController> visible = new WeakReference<>(null);
     final Activity activity;
     final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    boolean resumed, closed, pageReady, busy, waitingPermission;
+    boolean resumed, closed, busy, waitingPermission;
     JSONObject ready;
     AlertDialog dialog;
     UpdateController(Activity activity) {
         this.activity = activity;
+        // Old global cooldowns must not suppress discovery of a newer release.
+        AppUpdates.prefs(activity).edit().remove("checked").remove("deferred").apply();
         long version = AppUpdates.installed(activity);
         if (AppUpdates.prefs(activity).getLong("installed", -1) != version) {
             AppUpdates.cleanup(activity);
-            AppUpdates.prefs(activity).edit().putLong("installed",version).remove("checked").remove("deferred").apply();
+            AppUpdates.prefs(activity).edit().putLong("installed",version).remove("deferred-version").remove("deferred-until").apply();
         }
     }
     void onResume() {
+        if (closed || resumed) return;
         resumed = true; visible = new WeakReference<>(this);
         if (openConfirmation()) return;
         if (waitingPermission) {
@@ -40,19 +43,21 @@ class UpdateController {
             if (canInstall()) installReady(); else defer();
         } else if (ready != null) installReady(); else check();
     }
-    void onPageFinished() { pageReady = true; check(); }
     void onPause() { resumed = false; if (visible.get() == this) visible.clear(); dismiss(); }
-    static boolean due(long now, long checked, long deferred) {
-        return now >= deferred && (checked == 0 || now < checked || now - checked >= CHECK_INTERVAL);
+    boolean deferred(JSONObject release) {
+        return AppUpdates.prefs(activity).getLong("deferred-version", 0) == release.optLong("versionCode")
+            && System.currentTimeMillis() < AppUpdates.prefs(activity).getLong("deferred-until", 0);
+    }
+    void rememberDeferral(JSONObject release) {
+        AppUpdates.prefs(activity).edit().putLong("deferred-version", release.optLong("versionCode"))
+            .putLong("deferred-until", System.currentTimeMillis() + DEFER_INTERVAL).apply();
     }
     void check() {
-        if (!resumed || closed || !pageReady || busy || ready != null) return;
-        long now = System.currentTimeMillis();
-        if (!due(now, AppUpdates.prefs(activity).getLong("checked", 0), AppUpdates.prefs(activity).getLong("deferred", 0))) return;
-        AppUpdates.prefs(activity).edit().putLong("checked", now).apply(); busy = true;
+        if (!resumed || closed || busy || ready != null) return;
+        busy = true;
         execute(() -> {
             JSONObject release = null;
-            try { JSONObject next = checkRelease(); if (AppUpdates.newer(activity, next)) { download(next); release = next; } }
+            try { JSONObject next = checkRelease(); if (AppUpdates.newer(activity, next) && !deferred(next)) { download(next); release = next; } }
             catch (Exception ignored) { /* Offline checks never block the WebView. */ }
             final JSONObject result = release;
             handler.post(() -> { busy = false; if (closed) return; ready = result; if (resumed && ready != null) installReady(); });
@@ -76,15 +81,22 @@ class UpdateController {
         }
         JSONObject release = ready; ready = null; busy = true;
         // Never immediately reopen installation after the user cancels or returns from it.
-        AppUpdates.prefs(activity).edit().putLong("deferred", System.currentTimeMillis() + DEFER_INTERVAL).apply();
+        rememberDeferral(release);
         execute(() -> {
             boolean failed = false; try { stageInstall(release); } catch (Exception ignored) { failed = true; }
             final boolean error = failed;
-            handler.post(() -> { busy = false; if (closed || !resumed) return; if (error) Toast.makeText(activity,"업데이트 설치를 준비하지 못했습니다. 다음에 다시 확인합니다.",Toast.LENGTH_SHORT).show(); else openConfirmation(); });
+            handler.post(() -> {
+                busy = false;
+                // A failed preparation is retried on the next entry, not deferred for a day.
+                if (error) AppUpdates.prefs(activity).edit().remove("deferred-version").remove("deferred-until").apply();
+                if (closed || !resumed) return;
+                if (error) Toast.makeText(activity,"업데이트 설치를 준비하지 못했습니다. 다음에 다시 확인합니다.",Toast.LENGTH_SHORT).show();
+                else openConfirmation();
+            });
         });
     }
     void stageInstall(JSONObject release) throws Exception { AppUpdates.install(activity, release); }
-    void defer() { ready = null; AppUpdates.prefs(activity).edit().putLong("deferred",System.currentTimeMillis()+DEFER_INTERVAL).apply(); dismiss(); }
+    void defer() { if (ready != null) rememberDeferral(ready); ready = null; dismiss(); }
     private void dismiss() { if (dialog != null) { dialog.dismiss(); dialog = null; } }
     boolean openConfirmation() {
         if (!resumed || closed) return false;
